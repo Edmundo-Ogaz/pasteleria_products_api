@@ -5,7 +5,8 @@ from sqlalchemy import func
 import models
 import schemas
 import database
-from typing import List
+from typing import List, Optional
+from utils import find_word
 
 app = FastAPI()
 
@@ -61,3 +62,72 @@ def obtener_usuario(ingredient: str, db: Session = Depends(get_db)):
                 filtered_products.append(product)
 
     return filtered_products
+
+@app.get("/v2/productos", response_model=List[schemas.ProductResponse])
+async def buscar_productos_v2(ingredientes: Optional[str] = None, db: Session = Depends(get_db)):
+    """
+    Obtener productos filtrando por ingredientes separados por comas.
+    
+    Ejemplo de uso: /v2/productos?ingredientes=queso,tomate
+    """
+    print("buscar_productos_v2", ingredientes)
+    if not ingredientes:
+        return []
+    
+    list_ingredients = [ing.strip().upper() for ing in ingredientes.split(",")]
+    length = len(list_ingredients)
+
+    db_productos = db.query(models.Product).all()
+
+    productos_filtrados = []
+    for producto in db_productos:
+        finded = 0
+        for ingredient in list_ingredients:
+            if find_word(producto.ingredients, ingredient):
+                finded += 1
+        
+        if finded == length:
+            productos_filtrados.append(producto)
+
+            # if ingredient in producto.ingredients:
+            #     productos_filtrados.append(producto)
+
+        # if all(ingrediente in producto.ingredients for ingrediente in lista_ingredientes):
+        #     productos_filtrados.append(producto)
+    print("buscar_productos_v2 reponse", productos_filtrados)
+    return productos_filtrados
+
+@app.get("/v2/productos/tortas", response_model=List[schemas.ProductResponse])
+async def buscar_productos_v2(ingredientes: Optional[str] = None, db: Session = Depends(get_db)):
+    """
+    Obtener tortas filtrando por ingredientes separados por comas.
+    
+    Ejemplo de uso: /v2/productos/tortas?ingredientes=queso,tomate
+    """
+    print("buscar_tortas_v2", ingredientes)
+    if not ingredientes:
+        return []
+    
+    list_ingredients = [ing.strip().upper() for ing in ingredientes.split(",")]
+    length = len(list_ingredients)
+
+    db_productos = db.query(models.Product).all()
+
+    productos_filtrados = []
+    for producto in db_productos:
+        if producto.category == "Tortas":
+            finded = 0
+            for ingredient in list_ingredients:
+                if find_word(producto.ingredients, ingredient):
+                    finded += 1
+            
+            if finded == length:
+                productos_filtrados.append(producto)
+
+            # if ingredient in producto.ingredients:
+            #     productos_filtrados.append(producto)
+
+        # if all(ingrediente in producto.ingredients for ingrediente in lista_ingredientes):
+        #     productos_filtrados.append(producto)
+    
+    return productos_filtrados
