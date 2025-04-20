@@ -1,5 +1,7 @@
 @host = http://localhost:8000
 
+@host = https://df2a417e-5393-4ef5-b05c-e32c4dddcc0a-00-3frxygpj3qr35.picard.replit.dev
+
 ###
 curl {{host}}/health
 
