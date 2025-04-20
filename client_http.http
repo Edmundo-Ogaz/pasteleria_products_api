@@ -1,0 +1,10 @@
+@host = http://localhost:8000
+
+###
+curl {{host}}/health
+
+###
+
+curl -X GET \
+    -H 'accept: application/json' \
+{{host}}/products/ingredients/chocolate
