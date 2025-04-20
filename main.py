@@ -98,7 +98,7 @@ async def buscar_productos_v2(ingredientes: Optional[str] = None, db: Session = 
     return productos_filtrados
 
 @app.get("/v2/productos/tortas", response_model=List[schemas.ProductResponse])
-async def buscar_productos_v2(ingredientes: Optional[str] = None, db: Session = Depends(get_db)):
+async def buscar_tortas_v2(ingredientes: Optional[str] = None, db: Session = Depends(get_db)):
     """
     Obtener tortas filtrando por ingredientes separados por comas.
     
@@ -123,11 +123,34 @@ async def buscar_productos_v2(ingredientes: Optional[str] = None, db: Session = 
             
             if finded == length:
                 productos_filtrados.append(producto)
+    
+    return productos_filtrados
 
-            # if ingredient in producto.ingredients:
-            #     productos_filtrados.append(producto)
+@app.get("/v2/productos/postres", response_model=List[schemas.ProductResponse])
+async def buscar_postres_v2(ingredientes: Optional[str] = None, db: Session = Depends(get_db)):
+    """
+    Obtener tortas filtrando por ingredientes separados por comas.
+    
+    Ejemplo de uso: /v2/productos/tortas?ingredientes=queso,tomate
+    """
+    print("buscar_postres_v2", ingredientes)
+    if not ingredientes:
+        return []
+    
+    list_ingredients = [ing.strip().upper() for ing in ingredientes.split(",")]
+    length = len(list_ingredients)
 
-        # if all(ingrediente in producto.ingredients for ingrediente in lista_ingredientes):
-        #     productos_filtrados.append(producto)
+    db_productos = db.query(models.Product).all()
+
+    productos_filtrados = []
+    for producto in db_productos:
+        if producto.category == "Postres":
+            finded = 0
+            for ingredient in list_ingredients:
+                if find_word(producto.ingredients, ingredient):
+                    finded += 1
+            
+            if finded == length:
+                productos_filtrados.append(producto)
     
     return productos_filtrados
