@@ -1,6 +1,9 @@
 run:
 	uvicorn main:app --reload
 
+run2:
+	hypercorn main:app --reload
+
 test:
 	PYTHONPATH=. pytest tests/test_find_word.py
 
