@@ -9,3 +9,6 @@ test:
 
 build:
 	pip install -r requirements.txt
+
+run2:
+	uvicorn main2:app --reload

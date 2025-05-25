@@ -17,3 +17,13 @@ def find_word(list, element):
             result.append(word)
             
     return result
+
+import re
+
+def singularizar(palabra: str) -> str:
+    # Simplificación básica; puedes usar nltk o reglas específicas
+    if palabra.endswith("es"):
+        return palabra[:-2]
+    elif palabra.endswith("s"):
+        return palabra[:-1]
+    return palabra
