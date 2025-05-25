@@ -1,7 +1,6 @@
 @host = http://localhost:8000
-
 @host = https://df2a417e-5393-4ef5-b05c-e32c4dddcc0a-00-3frxygpj3qr35.picard.replit.dev
-
+@host = https://pasteleriaproductsapi-production.up.railway.app
 ###
 curl {{host}}/health
 
@@ -10,5 +9,3 @@ curl {{host}}/health
 curl -X GET \
     -H 'accept: application/json' \
 {{host}}/products/ingredients/chocolate
-
-https://df2a417e-5393-4ef5-b05c-e32c4dddcc0a-00-3frxygpj3qr35.picard.replit.dev/products/ingredients/chocolate
