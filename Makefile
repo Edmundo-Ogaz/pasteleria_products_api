@@ -1,7 +1,7 @@
 run:
 	uvicorn main:app --reload
 
-run2:
+run-hypercorn:
 	hypercorn main:app --reload
 
 test:

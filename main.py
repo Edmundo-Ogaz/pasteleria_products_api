@@ -1,156 +1,126 @@
-from fastapi import FastAPI, Depends, HTTPException
-from fastapi.encoders import jsonable_encoder
-from sqlalchemy.orm import Session
-from sqlalchemy import func
-import models
-import schemas
-import database
+from fastapi import FastAPI, Depends, Query,  HTTPException
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
+from sqlalchemy import select, func
+
+from database_postgres import get_db, engine, Base
+from models2 import Product, Ingredient, product_ingredient_association
+from schemas2 import ProductDTO
+from utils import singular
 from typing import List, Optional
-from utils import find_word
 
 app = FastAPI()
 
-# Crear tablas
-models.Base.metadata.create_all(bind=database.engine)
+# Crear tablas al inicio
+@app.on_event("startup")
+async def startup():
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
 
-# Dependencia de la base de datos
-def get_db():
-    db = database.SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
-@app.post("/products/", response_model=schemas.ProductResponse)
-def crear_usuario(product: schemas.ProductCreate, db: Session = Depends(get_db)):
-    db_product = models.Product(name=product.name, price=product.price, image=product.image, category=product.category, dispatch=product.dispatch, ingredients=product.ingredients, portions=product.portions)
-    # db_product = Product(**product.dict())
-    db.add(db_product)
-    db.commit()
-    db.refresh(db_product)
-    return db_product
-
-@app.get("/products/{product_id}", response_model=schemas.ProductResponse)
-def obtener_usuario(product_id: int, db: Session = Depends(get_db)):
-    product = db.query(models.Product).filter(models.Product.id == product_id).first()
-    if product is None:
+@app.get("/api/v2.0/products/{id}", response_model=ProductDTO)
+async def get_product(id: int, db: AsyncSession = Depends(get_db)):
+    print(f"getProduct {id}")
+    product = await db.execute(
+        select(Product)
+        .options(selectinload(Product.ingredientList))
+        .where(Product.id == id)
+    )
+    if not product:
         raise HTTPException(status_code=404, detail="Product not found")
-    return product
+    return product.scalar_one_or_none()
 
-@app.get("/products/ingredients/{ingredient}", response_model=List[schemas.ProductResponse])
-def obtener_usuario(ingredient: str, db: Session = Depends(get_db)):
-    # product = db.query(models.Product).filter(models.Product.id == product_id).first()
-    # products = db.query(models.Product).filter(func.json_extract(models.Product.ingredients, '$[*]') == ingredient).all()
-    # products = db.query(models.Product).filter(models.Product.ingredients.like(ingredient)).all()
+@app.get("/products/test")
+async def leer_usuarios(db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(Product))
+    usuarios = result.scalars().all()
+    return usuarios
 
-    search_term = ingredient.upper()
+@app.get("/api/v1.0/products", response_model=List[ProductDTO])
+async def get_products(
+    ingredients: Optional[str] = Query(None),
+    db: AsyncSession = Depends(get_db)
+):
+    if ingredients:
+        print("get_products by ingredients", ingredients)
+        return await searchIngredients2(db, ingredients, "ALL")
+    result = await db.execute(
+        select(Product)
+        .options(selectinload(Product.ingredientList))
+    )
+    print("get_products")
+    return result.scalars().all()
 
-    all_products = db.query(models.Product).all()
-    
-    # Filtramos manualmente los productos que contienen el ingrediente
-    filtered_products = []
-    for product in all_products:
-        # Convertir la cadena JSON a lista
-        ingredients_list = product.ingredients
+@app.get("/api/v1.0/products/cakes", response_model=List[ProductDTO])
+async def get_cakes_by_ingredients(
+    ingredients: str = Query(...),
+    db: AsyncSession = Depends(get_db)
+):
+    print("get_cakes_by_ingredients", ingredients)
+    response = await searchIngredients2(db, ingredients, "Tortas")
 
-        # Convertir cada ingrediente a mayúsculas y verificar si contiene el término de búsqueda
-        # if any(search_term in ing.upper() for ing in ingredients_list):
-        #     filtered_products.append(product)
+    print("get_cakes_by_ingredients response", len(response))
+    return response
 
-        for element in ingredients_list:
-            if search_term in element:
-                filtered_products.append(product)
+@app.get("/api/v1.0/products/desserts", response_model=List[ProductDTO])
+async def get_desserts_by_ingredients(
+    ingredients: str = Query(...),
+    db: AsyncSession = Depends(get_db)
+):
+    print("get_desserts_by_ingredients", ingredients)
+    response = await searchIngredients2(db, ingredients, "Postres")
 
-    return filtered_products
+    print("get_desserts_by_ingredients response", len(response))
+    return response
 
-@app.get("/v2/productos", response_model=List[schemas.ProductResponse])
-async def buscar_productos_v2(ingredientes: Optional[str] = None, db: Session = Depends(get_db)):
-    """
-    Obtener productos filtrando por ingredientes separados por comas.
-    
-    Ejemplo de uso: /v2/productos?ingredientes=queso,tomate
-    """
-    print("buscar_productos_v2", ingredientes)
-    if not ingredientes:
-        return []
-    
-    list_ingredients = [ing.strip().upper() for ing in ingredientes.split(",")]
-    length = len(list_ingredients)
+@app.get("/api/v1.0/products/cocktails", response_model=List[ProductDTO])
+async def get_cocktails_by_ingredients(
+    ingredients: str = Query(...),
+    db: AsyncSession = Depends(get_db)
+):
+    print("get_cocktails_by_ingredients", ingredients)
+    response = await searchIngredients2(db, ingredients, "Cocktel")
 
-    db_productos = db.query(models.Product).all()
+    print("get_cocktails_by_ingredients response", len(response))
+    return response
 
-    productos_filtrados = []
-    for producto in db_productos:
-        finded = 0
-        for ingredient in list_ingredients:
-            if find_word(producto.ingredients, ingredient):
-                finded += 1
-        
-        if finded == length:
-            productos_filtrados.append(producto)
+@app.get("/api/v1.0/products/kutchens", response_model=List[ProductDTO])
+async def get_kutchens_by_ingredients(
+    ingredients: str = Query(...),
+    db: AsyncSession = Depends(get_db)
+):
+    print("get_kutchens_by_ingredients", ingredients)
+    response = await searchIngredients2(db, ingredients, "Kutchen")
 
-            # if ingredient in producto.ingredients:
-            #     productos_filtrados.append(producto)
+    print("get_kutchens_by_ingredients response", len(response))
+    return response
 
-        # if all(ingrediente in producto.ingredients for ingrediente in lista_ingredientes):
-        #     productos_filtrados.append(producto)
-    print("buscar_productos_v2 reponse", productos_filtrados)
-    return productos_filtrados
+async def searchIngredients2( db: AsyncSession, ingredients: str, category: str):
+    print("searchIngredients2", ingredients, category)
+    response = []
 
-@app.get("/v2/productos/tortas", response_model=List[schemas.ProductResponse])
-async def buscar_tortas_v2(ingredientes: Optional[str] = None, db: Session = Depends(get_db)):
-    """
-    Obtener tortas filtrando por ingredientes separados por comas.
-    
-    Ejemplo de uso: /v2/productos/tortas?ingredientes=queso,tomate
-    """
-    print("buscar_tortas_v2", ingredientes)
-    if not ingredientes:
-        return []
-    
-    list_ingredients = [ing.strip().upper() for ing in ingredientes.split(",")]
-    length = len(list_ingredients)
+    if not ingredients.strip():
+        return response
 
-    db_productos = db.query(models.Product).all()
+    array_ingredients = ingredients.strip().split(",")
+    ingredient_names = [singular(e).lower() for e in array_ingredients]
+    print("searchIngredients2", ingredient_names)
 
-    productos_filtrados = []
-    for producto in db_productos:
-        if producto.category == "Tortas":
-            finded = 0
-            for ingredient in list_ingredients:
-                if find_word(producto.ingredients, ingredient):
-                    finded += 1
-            
-            if finded == length:
-                productos_filtrados.append(producto)
-    
-    return productos_filtrados
+    stmt = (
+        select(Product)
+        .join(product_ingredient_association)
+        .join(Ingredient)
+        .where(func.lower(Ingredient.name).in_(ingredient_names))
+        .group_by(Product.id)
+        .having(func.count(func.distinct(Ingredient.id)) == len(ingredient_names))
+        .options(selectinload(Product.ingredientList))
+    )
+    result = await db.execute(stmt)
+    db_products = result.scalars().all()
+    print("searchIngredients2 size", len(db_products))
 
-@app.get("/v2/productos/postres", response_model=List[schemas.ProductResponse])
-async def buscar_postres_v2(ingredientes: Optional[str] = None, db: Session = Depends(get_db)):
-    """
-    Obtener tortas filtrando por ingredientes separados por comas.
-    
-    Ejemplo de uso: /v2/productos/tortas?ingredientes=queso,tomate
-    """
-    print("buscar_postres_v2", ingredientes)
-    if not ingredientes:
-        return []
-    
-    list_ingredients = [ing.strip().upper() for ing in ingredientes.split(",")]
-    length = len(list_ingredients)
+    for product in db_products:
+        if "ALL" == category or product.category == category:
+            response.append(product)
 
-    db_productos = db.query(models.Product).all()
-
-    productos_filtrados = []
-    for producto in db_productos:
-        if producto.category == "Postres":
-            finded = 0
-            for ingredient in list_ingredients:
-                if find_word(producto.ingredients, ingredient):
-                    finded += 1
-            
-            if finded == length:
-                productos_filtrados.append(producto)
-    
-    return productos_filtrados
+    print("searchIngredients2 response", len(response))
+    return response
