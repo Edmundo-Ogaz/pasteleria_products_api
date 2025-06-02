@@ -7,6 +7,9 @@ run-hypercorn:
 test:
 	PYTHONPATH=. pytest tests/test_find_word.py
 
+frezze:
+	python -m pip freeze > requirements.txt
+
 build:
 	pip install -r requirements.txt
 
