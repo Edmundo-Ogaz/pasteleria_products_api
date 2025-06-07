@@ -1,6 +1,7 @@
 from sqlalchemy import Table, Column, Integer, ForeignKey, String, JSON
-from sqlalchemy.orm import relationship
-from database import Base
+from sqlalchemy.orm import relationship, declarative_base
+
+Base = declarative_base()
 
 # Tabla intermedia para la relación muchos a muchos
 product_ingredient_association = Table(

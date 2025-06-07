@@ -1,8 +1,8 @@
 run:
-	uvicorn main:app --reload
+	uvicorn main_serverless:app --reload
 
 run-hypercorn:
-	hypercorn main:app --reload
+	hypercorn main_serverless:app --reload
 
 test:
 	PYTHONPATH=. pytest tests/test_find_word.py
