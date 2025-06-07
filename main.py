@@ -9,13 +9,33 @@ from schemas2 import ProductDTO
 from utils import singular
 from typing import List, Optional
 
-app = FastAPI()
+from contextlib import asynccontextmanager
 
-# Crear tablas al inicio
-@app.on_event("startup")
-async def startup():
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Código de inicio (startup)
+    try:
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+        print("✅ Tablas creadas")
+    except Exception as e:
+        print("❌ Error al crear tablas:", e)
+
+    yield  # Aquí arranca la app FastAPI
+
+    # Código de cierre (shutdown) — opcional
+    # await engine.dispose()
+    print("🛑 Aplicación cerrada")
+
+app = FastAPI(lifespan=lifespan)
+
+# app = FastAPI()
+
+# # Crear tablas al inicio
+# @app.on_event("startup")
+# async def startup():
+#     async with engine.begin() as conn:
+#         await conn.run_sync(Base.metadata.create_all)
 
 @app.get("/api/v2.0/products/{id}", response_model=ProductDTO)
 async def get_product(id: int, db: AsyncSession = Depends(get_db)):
