@@ -1,3 +1,12 @@
+env:
+        python3 -m venv venv
+
+activate:
+        source venv/bin/activate
+
+deactivate:
+        deactivate
+
 run:
 	uvicorn main_serverless:app --reload
 
@@ -14,4 +23,4 @@ build:
 	pip install -r requirements.txt
 
 run2:
-	uvicorn main2:app --reload
+	uvicorn main_old:app --reload
